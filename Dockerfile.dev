@@ -1,0 +1,41 @@
+FROM openjdk:8-jdk as builder
+
+USER root
+
+RUN mkdir -p /opt/streama \
+ && wget http://github.com/streamaserver/streama/archive/master.tar.gz -O /tmp/master.tar.gz \
+ && tar -xvf /tmp/master.tar.gz --strip-components=1 -C /opt/streama
+
+WORKDIR /opt/streama
+
+ENV TERM=xterm
+
+# This allows us to cache at least this part of the install
+RUN ./gradlew
+RUN ./gradlew build -i -S -x test || ./gradlew build -i -S -x test || ./gradlew build -i -S -x test 
+
+FROM openjdk:8-jre
+EXPOSE 8080
+
+ENV USER_UID=1001 \
+    USER_NAME=streama \
+    HOME=/opt/streama \
+    ACTIVE_PROFILE=docker
+
+WORKDIR ${HOME}
+
+RUN mkdir -p ${HOME} /data \
+ && chown -R ${USER_UID}:0 ${HOME} \
+ && chown -R ${USER_UID}:0 /data \
+ && chmod -R ug+rwx ${HOME} /data \
+ && chmod g+rw /etc/passwd
+
+COPY bin/entrypoint.sh /bin/entrypoint.sh
+RUN chmod +x /bin/entrypoint.sh
+
+COPY --from=builder /opt/streama/build/libs/*.war streama.war
+RUN wget https://raw.githubusercontent.com/streamaserver/streama/master/grails-app/conf/application.yml -P ${HOME} -O application.yml
+
+USER ${USER_UID}
+
+ENTRYPOINT ["sh", "/bin/entrypoint.sh"]
