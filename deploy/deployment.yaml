@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streama
+spec:
+  selector:
+    matchLabels:
+      app: streama
+  template:
+    metadata:
+      labels:
+        app: streama
+    spec:
+      containers:
+      - env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: docker.io/homecluster/streama:dev
+        imagePullPolicy: Always
+        name: streama
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /data/streama
+          name: streama-data
+        - mountPath: /opt/streama
+          name: streama-config
+      restartPolicy: Always
+      volumes:
+      - name: streama-data
+        persistentVolumeClaim:
+          claimName: streama-data
+      - name: streama-config
+        persistentVolumeClaim:
+          claimName: streama-config

@@ -9,4 +9,6 @@ if ! whoami &>/dev/null; then
   fi
 fi
 
+cp -n /staging/* ${HOME}
+
 exec java -Dgrails.env=$ACTIVE_PROFILE -jar streama.war
